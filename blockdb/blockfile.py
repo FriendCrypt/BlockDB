@@ -35,6 +35,8 @@ class BlockFile:
        self.mm      = mmap.mmap(self.fd.fileno(), 0)
        self.cur_pos = 0
        self.highest = 0
+       for b in self.get_blocks(offset=0): pass
+       self.highest=self.cur_pos
    def append_block(self,data):
        """ Appends a new block to the end of the file
            If the block will not fit, throws an exception
@@ -71,6 +73,13 @@ class BlockFile:
           block_size    = len(block_data)
           self.cur_pos += block_size+4
           yield block_data
+   def cut_from(self,offset):
+       """ Cuts from the specified offset and sets cur_pos and highest
+       """
+       self.mm[offset:offset+4] = struct.pack('<L',0)
+       self.cur_pos = offset
+       self.highest = offset
+       self.mm.flush()
    def close(self):
        self.mm.flush()
        self.fd.close()
@@ -82,3 +91,14 @@ if __name__=='__main__':
    print 'Appended block at %s' % b.append_block('Test the third')
    for block in b.get_blocks():
        print 'Block contents: %s' % block
+   
+   cut_offs = b.append_block('Test the fourth')
+   print 'Precut:'
+   for block in b.get_blocks(offset=0):
+       print 'Block contents: %s' % block
+   b.cut_from(cut_offs)
+
+   print 'Postcut:'
+   for block in b.get_blocks(offset=0):
+       print 'Block contents: %s' % block
+
